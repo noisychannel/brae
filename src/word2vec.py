@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Takes a phrase and converts it into it's vector
+# Takes a phrase and converts it into its vector
 # representation by using vector representations
 # for each word in the phrase
 
