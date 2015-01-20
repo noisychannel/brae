@@ -1,4 +1,5 @@
 import numpy as np
+import activationfunction as activationfunction
 
 class AutoEncoder:
 
@@ -22,50 +23,53 @@ class AutoEncoder:
 
   def __init__(self, n=100, activation=None):
     self.n = n
-    self.activation = activation
-    self.paramMatrix = np.zeroes(n, 2*n)
-    self.bias = np.zeroes(n, 1)
-    self.reconParamMatrix = np.zeroes(n, 2*n)
-    self.reconBias = np.zeroes(n, 1)
+    if activation:
+      self.activation = activation
+    else:
+      self.activation = activationfunction.ActivationFunction("tanh")
+    self.paramMatrix = np.zeros((n, 2*n))
+    self.bias = np.zeros((n, 1))
+    self.reconParamMatrix = np.zeros((2*n, n))
+    self.reconBias = np.zeros((2*n, 1))
 
   # Computes the parent vector from the input vectors
   # c1 and c2 are n-dimensional vectors
   # p = f(W * [c1;c2] + b)
-  def computeParentVector(c1, c2):
+  def computeParentVector(self, c1, c2):
     # Sanity check for dimensionality of input
     try:
-      (np.shape(c1) == (n, 1)) & (np.shape(c2) == (n, 1))
+      (np.shape(c1) == (self.n, 1)) & (np.shape(c2) == (self.n, 1))
     except:
       print "Input shapes are not consistent with expected dimensionality"
-      print "Expected dimensionality : " + str(n)
+      print "Expected dimensionality : " + str(self.n)
       print "Got : c1 = " + str(np.shape(c1))
       print "Got : c2 = " + str(np.shape(c2))
       raise
 
-    c1c2 = np.hstack(c1, c2)
-    p = activation.apply(self.paramMatrix * c1c2 + bias)
+    c1c2 = np.vstack((c1, c2))
+    p = self.activation.apply(np.dot(self.paramMatrix, c1c2) + self.bias)
 
     return p
 
   # Computes the reconstruction error between a parent and its children
   # [c1':c2'] = f(W_2 * p + b_2)
-  def computeReconstructionError(p, c1, c2):
+  def computeReconstructionError(self, p, c1, c2):
     try:
-      (np.shape(c1) == (n, 1)) & (np.shape(c2) == (n, 1) & np.shape(p) == (n, n))
+      (np.shape(c1) == (self.n, 1)) & (np.shape(c2) == (self.n, 1)) & (np.shape(p) == (self.n, 1))
     except:
       print "Input shapes are not consistent with expected dimensionality"
-      print "Expected dimensionality : " + str(n)
+      print "Expected dimensionality : " + str(self.n)
       print "Got : c1 = " + str(np.shape(c1))
       print "Got : c2 = " + str(np.shape(c2))
       print "Got : p = " + str(np.shape(c2))
       raise
 
-    c1c2Prime = activation.apply(self.reconParamMatrix * p + reconBias )
+    c1c2Prime = self.activation.apply(np.dot(self.reconParamMatrix, p) + self.reconBias )
 
-    return computeL2Norm(c1c2Prime, np.hstack(c1,c2))
+    return self.computeL2Norm(c1c2Prime, np.vstack((c1,c2)))
 
 
-  def computeL2Norm(input1, input2):
+  def computeL2Norm(self, input1, input2):
     try:
       (np.shape(input1) == np.shape(input2))
     except:

@@ -1,3 +1,4 @@
 tools/word2vec
 data/*
 papers
+*.pyc
