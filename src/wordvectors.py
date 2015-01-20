@@ -52,8 +52,7 @@ class WordVectors:
           ch = fin.read(1)
           if ch == ' ':
             break
-            word += ch
-        print word
+          word += ch
         vocab.append(word)
 
         vector = np.fromstring(fin.read(binary_len), np.float32)
