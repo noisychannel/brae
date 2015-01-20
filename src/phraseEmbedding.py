@@ -25,25 +25,27 @@ def computeBestBinaryTree(phraseVectors, autoEncoder):
 
   return minErrorIndex, minError, minErrorParent
 
-a = autoencoder.AutoEncoder()
-phraseVectors = [np.random.rand(100,1),
-                  np.random.rand(100,1),
-                  np.random.rand(100,1),
-                  np.random.rand(100,1),
-                  np.random.rand(100,1)]
+n = 200
+a = autoencoder.AutoEncoder(n)
+w = wordvectors.WordVectors("/export/a04/gkumar/code/custom/brae/tools/word2vec/vectors.bin")
+
+phrase = "this pack of chips tastes funky"
+words = phrase.split()
+
+print words
+
+phraseVectors = []
+for word in words:
+  phraseVectors.append(np.reshape(w[word], (n,1)))
 
 # Used to track combination pattern
-phraseIndices = [i for i in range(len(phraseVectors))]
+combinationPattern = phrase.split()
 
 while len(phraseVectors) > 1:
   combinedIndex, combinedError, combinedParent = computeBestBinaryTree(phraseVectors, a)
   phraseVectors[combinedIndex] = combinedParent
   del phraseVectors[combinedIndex+1]
-  phraseIndices[combinedIndex] = (phraseIndices[combinedIndex], phraseIndices[combinedIndex+1])
-  del phraseIndices[combinedIndex+1]
+  combinationPattern[combinedIndex] = (combinationPattern[combinedIndex], combinationPattern[combinedIndex+1])
+  del combinationPattern[combinedIndex+1]
 
-print phraseIndices
-
-w = wordvectors.WordVectors("/export/a04/gkumar/code/custom/brae/tools/word2vec/vectors.bin")
-print w.vocab
-print w.vectors
+print combinationPattern

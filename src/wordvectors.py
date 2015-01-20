@@ -1,3 +1,11 @@
+"""
+
+A wrapper for reading and interpreting vectors pre-trained using word2vec
+Derived from Google's word2vec python wrapper
+https://pypi.python.org/pypi/word2vec
+
+"""
+
 import numpy as np
 
 class WordVectors:
@@ -5,6 +13,7 @@ class WordVectors:
   vocab = None
   # Trained word embeddings as fixed dimensional vectors
   vectors = None
+  l2Norm = None
 
   def __init__(self, fname, binary=True):
     """
@@ -19,6 +28,7 @@ class WordVectors:
     if binary:
       print "Reading vectors in binary format"
       self.from_binary(fname)
+      self.l2norm = np.vstack(self.unitvec(vec) for vec in self.vectors)
       print "Read " + str(len(self.vocab)) + " entries from the binary file"
       print "Embedding shape = " + str(np.shape(self.vectors[0]))
     else:
@@ -34,9 +44,6 @@ class WordVectors:
     fname : path to file
     save_memory : boolean
 
-    Returns
-    -------
-    WordVectors class
     """
     with open(fname) as fin:
       header = fin.readline()
@@ -61,3 +68,28 @@ class WordVectors:
 
     self.vocab = np.array(vocab)
     self.vectors = vectors
+
+  def ix(self, word):
+    """
+    Returns the index on self.vocab and self.l2norm for `word`
+    """
+    temp = np.where(self.vocab == word)[0]
+    if temp.size == 0:
+      raise KeyError('Word not in vocabulary')
+    else:
+      return temp[0]
+
+
+  def __getitem__(self, word):
+    return self.get_vector(word)
+
+
+  def get_vector(self, word):
+    """
+    Returns the (l2norm) vector for `word` in the vocabulary
+    """
+    idx = self.ix(word)
+    return self.l2norm[idx]
+
+  def unitvec(self, vec):
+    return (1.0 / np.linalg.norm(vec, ord=2)) * vec

@@ -27,10 +27,10 @@ class AutoEncoder:
       self.activation = activation
     else:
       self.activation = activationfunction.ActivationFunction("tanh")
-    self.paramMatrix = np.zeros((n, 2*n))
-    self.bias = np.zeros((n, 1))
-    self.reconParamMatrix = np.zeros((2*n, n))
-    self.reconBias = np.zeros((2*n, 1))
+    self.paramMatrix = np.random.rand(n, 2*n)
+    self.bias = np.random.rand(n, 1)
+    self.reconParamMatrix = np.random.rand(2*n, n)
+    self.reconBias = np.random.rand(2*n, 1)
 
   # Computes the parent vector from the input vectors
   # c1 and c2 are n-dimensional vectors
