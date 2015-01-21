@@ -73,9 +73,10 @@ class WordVectors:
     """
     Returns the index on self.vocab and self.l2norm for `word`
     """
-    temp = np.where(self.vocab == word)[0]
+    temp = np.where(self.vocab == word.encode('UTF-8'))[0]
     if temp.size == 0:
-      raise KeyError('Word not in vocabulary')
+      return -1
+      #raise KeyError('Word not in vocabulary')
     else:
       return temp[0]
 
@@ -89,7 +90,11 @@ class WordVectors:
     Returns the (l2norm) vector for `word` in the vocabulary
     """
     idx = self.ix(word)
-    return self.l2norm[idx]
+    if idx == -1:
+      # Key not found
+      return None
+    else:
+      return self.l2norm[idx]
 
   def unitvec(self, vec):
     return (1.0 / np.linalg.norm(vec, ord=2)) * vec

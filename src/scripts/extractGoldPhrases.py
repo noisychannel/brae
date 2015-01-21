@@ -9,12 +9,13 @@ decoding.
 
 import codecs
 import sys
+import re
 
 srcFile = codecs.open(sys.argv[1], encoding="utf8")
 tgtFile = codecs.open(sys.argv[2], encoding="utf8")
 ppFile = codecs.open(sys.argv[3], "w+", encoding="utf8")
 
-phrasePairs = {}
+phrasePairs = set()
 
 srcSentences = []
 
@@ -39,7 +40,7 @@ for line in tgtFile:
         phraseStart = int(alignmentMatch.group(1))
         phraseEnd = int(alignmentMatch.group(2))
         # Extract this phrase from the source
-        srcPhrase = " ".join(currentSrc[phraseStart:phraseEnd])
+        srcPhrase = " ".join(currentSrc[phraseStart:phraseEnd+1])
         tgtPhrase = " ".join(currentTgtPhrase)
         # Adding to a set ensures we have no duplicates
         phrasePairs.add((srcPhrase, tgtPhrase))

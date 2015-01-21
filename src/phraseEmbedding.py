@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import numpy as np
+import codecs
+import HTMLParser
 import autoencoder as autoencoder
 import wordvectors as wordvectors
 
@@ -25,27 +27,35 @@ def computeBestBinaryTree(phraseVectors, autoEncoder):
 
   return minErrorIndex, minError, minErrorParent
 
-n = 200
+n = 50
 a = autoencoder.AutoEncoder(n)
-w = wordvectors.WordVectors("/export/a04/gkumar/code/custom/brae/tools/word2vec/vectors.bin")
+w = wordvectors.WordVectors("/export/a04/gkumar/code/custom/brae/tools/word2vec/afp_eng.vectors.50.bin")
+h = HTMLParser.HTMLParser()
 
-phrase = "this pack of chips tastes funky"
-words = phrase.split()
+ppFile = open("/export/a04/gkumar/code/custom/brae/data/en.es.phrasepairs.tsv")
+for phrases in ppFile:
+  phrasePair = phrases.strip().split("\t")
 
-print words
+  tgtPhrase = h.unescape(phrasePair[1])
+  words = tgtPhrase.split()
 
-phraseVectors = []
-for word in words:
-  phraseVectors.append(np.reshape(w[word], (n,1)))
+  words = [word for word in words if w[word] != None]
+  print words
+
+  phraseVectors = []
+  for word in words:
+    phraseVectors.append(np.reshape(w[word], (n,1)))
 
 # Used to track combination pattern
-combinationPattern = phrase.split()
+  combinationPattern = list(words)
 
-while len(phraseVectors) > 1:
-  combinedIndex, combinedError, combinedParent = computeBestBinaryTree(phraseVectors, a)
-  phraseVectors[combinedIndex] = combinedParent
-  del phraseVectors[combinedIndex+1]
-  combinationPattern[combinedIndex] = (combinationPattern[combinedIndex], combinationPattern[combinedIndex+1])
-  del combinationPattern[combinedIndex+1]
+  while len(phraseVectors) > 1:
+    combinedIndex, combinedError, combinedParent = computeBestBinaryTree(phraseVectors, a)
+    phraseVectors[combinedIndex] = combinedParent
+    del phraseVectors[combinedIndex+1]
+    combinationPattern[combinedIndex] = (combinationPattern[combinedIndex], combinationPattern[combinedIndex+1])
+    del combinationPattern[combinedIndex+1]
 
-print combinationPattern
+  print combinationPattern
+
+  raw_input()
