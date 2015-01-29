@@ -1,108 +1,143 @@
 #!/usr/bin/env python
 
 import numpy as np
-import codecs
-import sys
-import HTMLParser
-from multiprocessing.dummy import Pool as ThreadPool
 import autoencoder as autoencoder
-import wordvectors as wordvectors
 
-if len(sys.argv) < 3:
-  print "./phraseEmbedding <n> <lambda>"
-  sys.exit(1)
-
-# Dimensionality of the input vector
-n = int(sys.argv[1])
-regularLambda = float(sys.argv[2])
-learningRate = 0.01
-numIterations = 100
-a = autoencoder.AutoEncoder(n)
-w = wordvectors.WordVectors("/export/a04/gkumar/code/custom/brae/tools/word2vec/afp_eng.vectors." + str(n) + ".bin")
-h = HTMLParser.HTMLParser()
-backPropTrainingData = []
-totalReconstructionError = 0
-
-ppFile = codecs.open("/export/a04/gkumar/code/custom/brae/data/en.es.phrasepairs.tsv", encoding="utf8")
-phrases = []
-for phrasePair in ppFile:
-  phrases.append(phrasePair)
-ppFile.close()
+class PhraseEmbeddingModel:
+  # Dimensionality of the input vector
+  n = 50
+  # A Word vector object that holds pre-trained word embeddings for the vocabulary
+  w = None
+  # Training data for backprop
+  backPropTrainingData = []
+  # Captures total reconstruction error per iteration of backprop
+  totalReconstructionError = 0
+  # An autoencoder that is shared by this phrase embedding model (RAE)
+  a = None
 
 
-# Given a source string 
-def computeBestBinaryTree(phraseVectors, autoEncoder):
-  # This is a greedy construction (Socher et al, 2010)
-  minError = float("inf")
-  minErrorIndex = None
-  minErrorParent = None
-  minErrorParent_z = None
-  minErrorC1C2Prime = None
-  minErrorC1C2Prime_z = None
-  errors = []
-  for i in range(len(phraseVectors) - 1):
-    # Check reconstruction error for (i, i+1)
-    p_z, p = autoEncoder.computeParentVector(phraseVectors[i], phraseVectors[i+1])
-    c1c2Prime_z, c1c2Prime, reconError = autoEncoder.computeSingleReconstructionError(p, phraseVectors[i], phraseVectors[i+1])
-    if reconError < minError:
-      minError = reconError
-      minErrorIndex = i
-      minErrorParent = p
-      minErrorParent_z = p_z
-      minErrorC1C2Prime = c1c2Prime
-      minErrorC1C2Prime_z = c1c2Prime_z
+  def __init__(self, n, w):
+    """
+    This initializes a phrase embedding model which is based on a
+    recursive autoencoder (RAE). This model can be trained with 
+    backpropagation and stochastic gradient descent
 
-  #print "Chose indices (" + str(i) + ", " + str(i+1) + ") for combination"
-  #print "The minimum error was " + str(minError)
-
-  return minErrorIndex, minError, minErrorParent, minErrorParent_z, minErrorC1C2Prime, minErrorC1C2Prime_z
+    Parameters: 
+    n : The dimensionality of the input
+    w : A word vector object that contains pre-trained word embeddings
+    """
+    self.n = n
+    self.w = w
+    self.a = autoencoder.AutoEncoder(self.n)
 
 
-def processPhrasePair(phrasePair):
-  phrasePair = phrasePair.strip().split("\t")
+  # Given a source string 
+  def findBestNodesToCombine(self, phraseVectors):
+    """
+    Given a phrase and the embeddings of each word in the phrase, this
+    finds the best leaves to combine based on a greedy metric
+    (Adjacent leaves that have the least reconstruction error
+    with respect to an autoencoder)
 
-  tgtPhrase = h.unescape(phrasePair[1])
-  words = tgtPhrase.split()
+    Parameters:
+    phraseVectors : A list of word embeddings which make up the phrase
 
-  words = [word for word in words if w[word] != None]
+    Returns : 
+    Details about which children were combined and in which order, what the 
+    parent was and the reconstruction error. These are returned so that they 
+    can be cached. This makes calculation of partial derivatives for 
+    backpropagation faster.
+    """
+    minError = float("inf")
+    minErrorIndex = None
+    minErrorParent = None
+    minErrorParent_z = None
+    minErrorC1C2Prime = None
+    minErrorC1C2Prime_z = None
+    errors = []
+    for i in range(len(phraseVectors) - 1):
+      # Check reconstruction error for (i, i+1)
+      p_z, p = self.a.computeParentVector(phraseVectors[i], phraseVectors[i+1])
+      c1c2Prime_z, c1c2Prime, reconError = self.a.computeSingleReconstructionError(p, phraseVectors[i], phraseVectors[i+1])
+      if reconError < minError:
+        minError = reconError
+        minErrorIndex = i
+        minErrorParent = p
+        minErrorParent_z = p_z
+        minErrorC1C2Prime = c1c2Prime
+        minErrorC1C2Prime_z = c1c2Prime_z
 
-  phraseVectors = []
-  for word in words:
-    phraseVectors.append(np.reshape(w[word], (n,1)))
+    #print "Chose indices (" + str(i) + ", " + str(i+1) + ") for combination"
+    #print "The minimum error was " + str(minError)
 
-  # Used to track combination pattern
-  combinationPattern = list(words)
-
-  while len(phraseVectors) > 1:
-    # A few values while creation of the best tree are cached for use in backprop
-    combinedIndex, combinedError, combinedParent, combinedParent_z, \
-        reconstructedC1C2, reconstructedC1C2_z = computeBestBinaryTree(phraseVectors, a)
-    # Cache values for backprop training and calculating gradients
-    backPropTrainingData.append((np.vstack((phraseVectors[combinedIndex], phraseVectors[combinedIndex+1])), \
-        combinedParent, combinedParent_z, reconstructedC1C2, reconstructedC1C2_z))
-    # Record total reconstruction error
-    global totalReconstructionError
-    totalReconstructionError = totalReconstructionError + combinedError**2
-    # Change the phrase vector to include the parent
-    phraseVectors[combinedIndex] = combinedParent
-    del phraseVectors[combinedIndex+1]
-    combinationPattern[combinedIndex] = (combinationPattern[combinedIndex], combinationPattern[combinedIndex+1])
-    del combinationPattern[combinedIndex+1]
+    return minErrorIndex, minError, minErrorParent, minErrorParent_z, minErrorC1C2Prime, minErrorC1C2Prime_z
 
 
+  def computeOptimalBinaryTree(self, phrase):
+    """
+    Given a phrase and the embeddings of each word in the phrase, this constructs
+    an 'optimal' binary tree for phrase embedding. This is based on the greedy
+    construction of Socher et al., 2010. Pairs of leaves are combined until
+    we are left with one node
 
-for i in range(numIterations):
-  for phrasePair in phrases:
-    processPhrasePair(phrasePair)
-  cost = (1./len(backPropTrainingData)) * totalReconstructionError + \
-      regularLambda * (np.sum(a.paramMatrix * a.paramMatrix) + \
-      np.sum(a.reconParamMatrix * a.reconParamMatrix))
-  print "Cost (" + str(i) + ") = " + str(cost)
-  #print "================================="
-  #print "Iteration : " + str(i+1)
-  dJ_dW1, dJ_dW2, dJ_db2, dJ_db3 =  a.getGradients(backPropTrainingData, True, 0.1)
-  a.paramMatrix = a.paramMatrix - learningRate * dJ_dW1
-  a.reconParamMatrix = a.reconParamMatrix - learningRate * dJ_dW2
-  a.bias = a.bias - learningRate * dJ_db2
-  a.reconBias = a.reconBias - learningRate * dJ_db3
-  totalReconstructionError = 0.
+    Parameters:
+    phrase : A phrase for which a binary tree for phrase embedding needs to be created
+    """
+
+    words = phrase.split()
+    words = [word for word in words if self.w[word] != None]
+    phraseVectors = []
+
+    for word in words:
+      phraseVectors.append(np.reshape(self.w[word], (self.n,1)))
+
+    # Used to track combination pattern
+    combinationPattern = list(words)
+
+    while len(phraseVectors) > 1:
+      # A few values (while creation of the best tree) are cached for use in backprop
+      combinedIndex, combinedError, combinedParent, combinedParent_z, \
+          reconstructedC1C2, reconstructedC1C2_z = self.findBestNodesToCombine(phraseVectors)
+      # Cache values for backprop training and calculating gradients
+      self.backPropTrainingData.append((np.vstack((phraseVectors[combinedIndex], phraseVectors[combinedIndex+1])), \
+          combinedParent, combinedParent_z, reconstructedC1C2, reconstructedC1C2_z))
+      # Record total reconstruction error
+      self.totalReconstructionError = self.totalReconstructionError + combinedError**2
+      # Change the phrase vector to include the parent
+      phraseVectors[combinedIndex] = combinedParent
+      del phraseVectors[combinedIndex+1]
+      combinationPattern[combinedIndex] = (combinationPattern[combinedIndex], combinationPattern[combinedIndex+1])
+      del combinationPattern[combinedIndex+1]
+
+
+  def train(self, phrases, numIterations, regularLambda, learningRate):
+    """
+    Trains this phrase embedding model with backpropagation
+
+    Parameters:
+    phrases: A list of phrases for training
+    numIterations : The number of iterations backprop should be performed for
+    regularLambda : The regularization hyper-parameter
+    learningRate : The learning rate for SGD
+    """
+
+    for i in range(numIterations):
+      for phrase in phrases:
+        self.computeOptimalBinaryTree(phrase)
+
+      cost = (1./len(self.backPropTrainingData)) * self.totalReconstructionError + \
+          regularLambda * (np.sum(self.a.paramMatrix * self.a.paramMatrix) + \
+          np.sum(self.a.reconParamMatrix * self.a.reconParamMatrix))
+      print "Cost (" + str(i) + ") = " + str(cost)
+
+      # Get partial derivatives
+      dJ_dW1, dJ_dW2, dJ_db2, dJ_db3 =  self.a.getGradients(self.backPropTrainingData, True, regularLambda)
+
+      # SGD : Update parameters
+      self.a.paramMatrix = self.a.paramMatrix - learningRate * dJ_dW1
+      self.a.reconParamMatrix = self.a.reconParamMatrix - learningRate * dJ_dW2
+      self.a.bias = self.a.bias - learningRate * dJ_db2
+      self.a.reconBias = self.a.reconBias - learningRate * dJ_db3
+
+      # Reset reconstruction error for the next iteration
+      self.totalReconstructionError = 0.
