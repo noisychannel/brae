@@ -2,14 +2,23 @@
 
 import numpy as np
 import codecs
+import sys
 import HTMLParser
 from multiprocessing.dummy import Pool as ThreadPool
 import autoencoder as autoencoder
 import wordvectors as wordvectors
 
-n = 50
+if len(sys.argv) < 3:
+  print "./phraseEmbedding <n> <lambda>"
+  sys.exit(1)
+
+# Dimensionality of the input vector
+n = int(sys.argv[1])
+regularLambda = float(sys.argv[2])
+learningRate = 0.01
+numIterations = 100
 a = autoencoder.AutoEncoder(n)
-w = wordvectors.WordVectors("/export/a04/gkumar/code/custom/brae/tools/word2vec/afp_eng.vectors.50.bin")
+w = wordvectors.WordVectors("/export/a04/gkumar/code/custom/brae/tools/word2vec/afp_eng.vectors." + str(n) + ".bin")
 h = HTMLParser.HTMLParser()
 backPropTrainingData = []
 totalReconstructionError = 0
@@ -81,15 +90,16 @@ def processPhrasePair(phrasePair):
     del combinationPattern[combinedIndex+1]
 
 
-learningRate = 0.01
-regularLambda = 0.1
 
-for i in range(10):
+for i in range(numIterations):
   for phrasePair in phrases:
     processPhrasePair(phrasePair)
-  print "Cost (" + str(i) + ") = " + str((1./len(backPropTrainingData)) * totalReconstructionError)
-  print "================================="
-  print "Iteration : " + str(i+1)
+  cost = (1./len(backPropTrainingData)) * totalReconstructionError + \
+      regularLambda * (np.sum(a.paramMatrix * a.paramMatrix) + \
+      np.sum(a.reconParamMatrix * a.reconParamMatrix))
+  print "Cost (" + str(i) + ") = " + str(cost)
+  #print "================================="
+  #print "Iteration : " + str(i+1)
   dJ_dW1, dJ_dW2, dJ_db2, dJ_db3 =  a.getGradients(backPropTrainingData, True, 0.1)
   a.paramMatrix = a.paramMatrix - learningRate * dJ_dW1
   a.reconParamMatrix = a.reconParamMatrix - learningRate * dJ_dW2

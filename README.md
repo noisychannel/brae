@@ -35,7 +35,6 @@ This experiment had
 10 iterations of batch backpropagation were performed
 
 TODO:
-1. Print regularized cost
 2. There seem to be some -1s in the input vectors, where are these coming from ? 
 3. Create a class for phraseEmbedding
 4. Do this for two languages
