@@ -1,0 +1,43 @@
+$ ./brae.py 50 0.1 0.5
+Reading vectors in binary format
+Read 555587 entries from the binary file
+Embedding shape = (50,)
+--- Done reading target word embeddings
+Reading vectors in binary format
+Read 496681 entries from the binary file
+Embedding shape = (50,)
+--- Done reading source word embeddings
+Cost (0) = 1478.1681533
+Cost (1) = 1475.70271025
+--- Done pre-training the target phase embeddings (RAE)
+
+$ ./brae.py 50 1.0 0.5
+Reading vectors in binary format
+Read 555587 entries from the binary file
+Embedding shape = (50,)
+--- Done reading target word embeddings
+Reading vectors in binary format
+Read 496681 entries from the binary file
+Embedding shape = (50,)
+--- Done reading source word embeddings
+Cost (0) = 4492.86279811
+Cost (1) = 4427.52872311
+--- Done pre-training the target phase embeddings (RAE)
+
+$ ./brae.py 50 0.001 0.5
+Reading vectors in binary format
+Read 555587 entries from the binary file
+Embedding shape = (50,)
+--- Done reading target word embeddings
+Reading vectors in binary format
+Read 496681 entries from the binary file
+Embedding shape = (50,)
+--- Done reading source word embeddings
+Cost (0) = 1147.72247346
+Cost (1) = 1145.73107553
+--- Done pre-training the target phase embeddings (RAE)
+
+#### Why does the cost depend on the learning rate. The first iteration should
+not because the cost does not depend on the learning rate
+
+

@@ -2,6 +2,9 @@ tools/word2vec
 data/LDC2012T21
 data/en.es.phrasepairs.tsv
 data/en_gigaword_afp/
+data/es_gigaword_afp/
 papers
 *.pyc
 exp
+model
+src/*.dat

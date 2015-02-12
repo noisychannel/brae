@@ -4,9 +4,11 @@ class ActivationFunction:
 
   activationFunction = None
   activationFunction_vectorized = None
+  funcType = None
 
   def __init__(self, type = ""):
     if type == "tanh":
+      self.funcType = "tanh"
       self.activationFunction = np.tanh
       # np.tanh is already vectorized, operates on elements when an array is provided
       self.activationFunction_vectorized = self.activationFunction

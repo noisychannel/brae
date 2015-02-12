@@ -26,6 +26,7 @@ class WordVectors:
     if binary:
       print "Reading vectors in binary format"
       self.vectorHash = {}
+      self.reverseVectorHash = {}
       self.from_binary(fname)
       print "Read " + str(len(self.vectorHash)) + " entries from the binary file"
       print "Embedding shape = " + str(np.shape(self.vectorHash[self.vectorHash.keys()[0]]))
